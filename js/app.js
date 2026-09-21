@@ -415,6 +415,7 @@
           <div class="reading-card-name">${reading.name}${reading.reversed ? '<span class="reversed-tag">(invertida)</span>' : ''}</div>
           <div class="reading-element">${reading.element}</div>
           <div class="reading-text">${reading.text}</div>
+          <div class="reading-work"><strong>Trabalho</strong> ${reading.workText.replace(/^No trabalho:\s*/, '')}</div>
         </div>`;
       readingList.appendChild(item);
     });
@@ -440,8 +441,38 @@
   function saveReadingAsImage() {
     const readings = state.captured.map(c => getCardReading(c.rank, c.suit, c.reversed));
     const W = 900;
-    const rowH = 200;
-    const H = 140 + readings.length * rowH + (state.spreadSize === 3 ? 140 : 0) + 60;
+    const textX = 180, textW = W - 220;
+    const lineH = 22;
+    const thumbH = 165;
+    const rowGap = 34;
+
+    // canvas temporário só para medir quebras de linha antes de saber a
+    // altura final (fontes usadas na medição precisam bater com o desenho)
+    const measure = document.createElement('canvas').getContext('2d');
+
+    const rows = readings.map((reading, i) => {
+      measure.font = '15px Georgia, serif';
+      const workClean = reading.workText.replace(/^No trabalho:\s*/, '');
+      const textLines = wrapLines(measure, reading.text, textW);
+      const workLines = wrapLines(measure, workClean, textW);
+      // posição(24) + nome(30) + elemento(20) + texto + respiro(16) + rótulo trabalho(20) + texto trabalho
+      const textBlockH = 24 + 30 + 20 + textLines.length * lineH + 16 + 20 + workLines.length * lineH;
+      const rowH = Math.max(thumbH, textBlockH);
+      return { reading, textLines, workLines, rowH };
+    });
+
+    const contentTop = 130;
+    let y = contentTop;
+    const rowTops = rows.map((r) => { const top = y; y += r.rowH + rowGap; return top; });
+    let synthesisTop = null, synthesisLines = [];
+    if (state.spreadSize === 3) {
+      measure.font = '15px Georgia, serif';
+      synthesisLines = wrapLines(measure, synthesize3(readings), W - 80);
+      synthesisTop = y;
+      y += 40 + synthesisLines.length * lineH;
+    }
+    const H = y + 40;
+
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const ctx = c.getContext('2d');
@@ -453,65 +484,86 @@
     ctx.font = '15px Georgia, serif';
     ctx.fillText(new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }), 40, 88);
 
-    let y = 130;
-    let pending = readings.length;
-    const drawAll = () => {
-      readings.forEach((reading, i) => {
-        const rowY = 130 + i * rowH;
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 40, rowY, 118, 165);
-          finishText(reading, i, rowY);
-          pending--;
-          if (pending === 0) finalizeSynthesisAndDownload();
-        };
-        img.src = state.captured[i].dataURL;
-      });
-    };
-    const finishText = (reading, i, rowY) => {
+    let pending = rows.length;
+    rows.forEach((row, i) => {
+      const rowY = rowTops[i];
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 40, rowY, 118, thumbH);
+        drawRowText(row, i, rowY);
+        pending--;
+        if (pending === 0) finalizeSynthesisAndDownload();
+      };
+      img.src = state.captured[i].dataURL;
+    });
+
+    function drawRowText(row, i, rowY) {
+      const { reading, textLines, workLines } = row;
       ctx.fillStyle = '#d8b467';
       ctx.font = '600 12px Georgia, serif';
       const posLabel = state.spreadSize === 3 ? POSITIONS_3[i].label.toUpperCase() : 'SUA CARTA';
-      ctx.fillText(posLabel, 180, rowY + 24);
+      ctx.fillText(posLabel, textX, rowY + 20);
       ctx.fillStyle = '#f3eefc';
       ctx.font = '700 22px Georgia, serif';
-      ctx.fillText(reading.name + (reading.reversed ? ' (invertida)' : ''), 180, rowY + 52);
+      ctx.fillText(reading.name + (reading.reversed ? ' (invertida)' : ''), textX, rowY + 46);
+      ctx.fillStyle = '#b6a9d6';
+      ctx.font = 'italic 13px Georgia, serif';
+      ctx.fillText(reading.element, textX, rowY + 64);
       ctx.fillStyle = '#ece5f9';
       ctx.font = '15px Georgia, serif';
-      wrapText(ctx, reading.text, 180, rowY + 80, W - 220, 22);
-    };
-    const finalizeSynthesisAndDownload = () => {
-      if (state.spreadSize === 3) {
-        const sy = 130 + readings.length * rowH + 10;
+      let ty = rowY + 88;
+      ty = drawLines(ctx, textLines, textX, ty, lineH);
+      ty += 16;
+      ctx.fillStyle = '#d8b467';
+      ctx.font = '700 13px Georgia, serif';
+      ctx.fillText('TRABALHO', textX, ty);
+      ty += 20;
+      ctx.fillStyle = '#b6a9d6';
+      ctx.font = '15px Georgia, serif';
+      drawLines(ctx, workLines, textX, ty, lineH);
+    }
+
+    function finalizeSynthesisAndDownload() {
+      if (synthesisTop !== null) {
         ctx.fillStyle = '#d8b467';
         ctx.font = '600 15px Georgia, serif';
-        ctx.fillText('Síntese da tiragem', 40, sy);
+        ctx.fillText('Síntese da tiragem', 40, synthesisTop);
         ctx.fillStyle = '#b6a9d6';
         ctx.font = '15px Georgia, serif';
-        wrapText(ctx, synthesize3(readings), 40, sy + 26, W - 80, 22);
+        drawLines(ctx, synthesisLines, 40, synthesisTop + 26, lineH);
       }
       const a = document.createElement('a');
       a.download = 'leitura-de-cartas.png';
       a.href = c.toDataURL('image/png');
       a.click();
-    };
-    drawAll();
+    }
   }
 
-  function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  /** Quebra `text` em linhas que cabem em maxWidth, sem desenhar. */
+  function wrapLines(ctx, text, maxWidth) {
     const words = text.split(' ');
+    const lines = [];
     let line = '';
     for (const w of words) {
       const test = line + w + ' ';
       if (ctx.measureText(test).width > maxWidth && line) {
-        ctx.fillText(line, x, y);
+        lines.push(line.trim());
         line = w + ' ';
-        y += lineHeight;
       } else {
         line = test;
       }
     }
-    ctx.fillText(line, x, y);
+    if (line) lines.push(line.trim());
+    return lines;
+  }
+
+  /** Desenha linhas já quebradas e retorna o y logo após a última. */
+  function drawLines(ctx, lines, x, y, lineHeight) {
+    for (const line of lines) {
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+    }
+    return y;
   }
 
   // ------------------------------------------------------------------

@@ -402,6 +402,19 @@ h1, h2, h3 { font-weight: 600; margin: 0 0 8px; }
   margin-bottom: 6px;
 }
 .reading-text { font-size: 14px; line-height: 1.5; color: #ece5f9; }
+.reading-work {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.reading-work strong {
+  color: var(--gold-soft);
+  font-weight: 700;
+  margin-right: 5px;
+}
 
 .reading-synthesis {
   margin-top: 14px;
