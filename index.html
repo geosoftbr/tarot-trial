@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Leitura de Cartas</title>
+<meta name="description" content="Fotografe uma carta do baralho comum e receba uma leitura no estilo tarô, tudo processado no seu aparelho." />
+<meta name="theme-color" content="#241b3a" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Leitura de Cartas" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== HOME ===================== -->
+  <section id="screen-home" class="screen active">
+    <header class="hero">
+      <div class="hero-symbols" aria-hidden="true">♠ ♥ ♦ ♣</div>
+      <h1>Leitura de Cartas</h1>
+      <p class="subtitle">Fotografe uma carta do baralho comum e receba uma leitura no estilo tarô — tudo processado aqui no aparelho, sem enviar nada para a internet.</p>
+    </header>
+
+    <div class="card-panel">
+      <h2>Escolha a tiragem</h2>
+      <div class="spread-options" role="radiogroup" aria-label="Tipo de tiragem">
+        <button class="spread-option selected" data-spread="1" type="button">
+          <span class="spread-title">1 carta</span>
+          <span class="spread-desc">Leitura rápida para o momento</span>
+        </button>
+        <button class="spread-option" data-spread="3" type="button">
+          <span class="spread-title">3 cartas</span>
+          <span class="spread-desc">Passado · Presente · Futuro</span>
+        </button>
+      </div>
+      <button id="btn-start" class="btn btn-primary btn-block" type="button">Começar leitura</button>
+    </div>
+
+    <details class="how-it-works">
+      <summary>Como funciona o reconhecimento?</summary>
+      <p>O app localiza a carta na foto, corrige a perspectiva e lê o valor e o naipe pelo índice do canto — tudo com processamento local de imagem, sem inteligência artificial externa. Ele acerta a maior parte das vezes, mas sempre mostra a carta identificada para você confirmar ou corrigir em um toque antes da leitura.</p>
+    </details>
+
+    <button id="btn-install" class="btn btn-ghost btn-block" type="button" hidden>Instalar na tela inicial</button>
+  </section>
+
+  <!-- ===================== CAPTURA ===================== -->
+  <section id="screen-capture" class="screen">
+    <header class="bar">
+      <button class="icon-btn" data-action="back-home" aria-label="Voltar">←</button>
+      <div class="bar-title" id="capture-title">Carta 1 de 1</div>
+      <div class="bar-spacer"></div>
+    </header>
+
+    <div class="camera-wrap">
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="camera-canvas" hidden></canvas>
+      <div class="guide-frame" aria-hidden="true"></div>
+      <p id="camera-hint" class="camera-hint">Alinhe a carta dentro da moldura, com boa luz e fundo liso</p>
+      <p id="camera-error" class="camera-error" hidden>Não foi possível acessar a câmera. Você pode escolher uma foto da galeria abaixo.</p>
+    </div>
+
+    <div class="capture-controls">
+      <label class="btn btn-secondary" for="file-input">Escolher da galeria</label>
+      <input id="file-input" type="file" accept="image/*" capture="environment" hidden />
+      <button id="btn-shoot" class="shutter-btn" type="button" aria-label="Capturar foto"></button>
+      <div class="capture-spacer"></div>
+    </div>
+  </section>
+
+  <!-- ===================== AJUSTE DE RECORTE ===================== -->
+  <section id="screen-adjust" class="screen">
+    <header class="bar">
+      <button class="icon-btn" data-action="retake" aria-label="Tirar outra foto">←</button>
+      <div class="bar-title">Ajuste os cantos da carta</div>
+      <div class="bar-spacer"></div>
+    </header>
+
+    <div class="adjust-wrap">
+      <div id="adjust-stage" class="adjust-stage">
+        <canvas id="adjust-canvas"></canvas>
+        <svg id="adjust-svg" class="adjust-svg"></svg>
+        <div class="handle" id="handle-0" data-i="0"></div>
+        <div class="handle" id="handle-1" data-i="1"></div>
+        <div class="handle" id="handle-2" data-i="2"></div>
+        <div class="handle" id="handle-3" data-i="3"></div>
+      </div>
+      <p class="hint-text">Arraste os quatro pontos para os cantos exatos da carta</p>
+    </div>
+
+    <div class="bottom-actions">
+      <button id="btn-retake" class="btn btn-secondary" type="button">Tirar outra foto</button>
+      <button id="btn-confirm-crop" class="btn btn-primary" type="button">Usar este recorte</button>
+    </div>
+  </section>
+
+  <!-- ===================== REVISÃO / CONFIRMAÇÃO ===================== -->
+  <section id="screen-review" class="screen">
+    <header class="bar">
+      <button class="icon-btn" data-action="retake" aria-label="Tirar outra foto">←</button>
+      <div class="bar-title" id="review-title">Carta identificada</div>
+      <div class="bar-spacer"></div>
+    </header>
+
+    <div class="review-body">
+      <div class="review-thumb-wrap">
+        <canvas id="review-canvas"></canvas>
+      </div>
+
+      <div class="review-result">
+        <div class="result-card-name" id="result-name">—</div>
+        <div class="result-confidence" id="result-confidence"></div>
+
+        <label class="reversed-toggle">
+          <input type="checkbox" id="chk-reversed" />
+          <span>Carta invertida (de cabeça para baixo)</span>
+        </label>
+
+        <button id="btn-open-picker" class="btn btn-ghost btn-block" type="button">Não é essa carta? Corrigir</button>
+      </div>
+
+      <!-- seletor manual -->
+      <div id="picker" class="picker" hidden>
+        <div class="picker-suits" id="picker-suits"></div>
+        <div class="picker-ranks" id="picker-ranks"></div>
+      </div>
+    </div>
+
+    <div class="bottom-actions">
+      <button id="btn-confirm-card" class="btn btn-primary btn-block" type="button">Confirmar esta carta</button>
+    </div>
+  </section>
+
+  <!-- ===================== LEITURA FINAL ===================== -->
+  <section id="screen-reading" class="screen">
+    <header class="bar">
+      <div class="bar-spacer"></div>
+      <div class="bar-title">Sua leitura</div>
+      <div class="bar-spacer"></div>
+    </header>
+
+    <div id="reading-list" class="reading-list"></div>
+    <div id="reading-synthesis" class="reading-synthesis" hidden></div>
+
+    <div class="bottom-actions column">
+      <button id="btn-save-image" class="btn btn-secondary btn-block" type="button">Salvar leitura como imagem</button>
+      <button id="btn-new-reading" class="btn btn-primary btn-block" type="button">Nova leitura</button>
+    </div>
+  </section>
+
+</div>
+
+<script src="js/cards.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/templates-data.js"></script>
+<script src="js/recognizer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
