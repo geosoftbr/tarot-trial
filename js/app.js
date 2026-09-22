@@ -288,7 +288,7 @@
   function retake() { goToCapture(); }
 
   $('#btn-confirm-crop').addEventListener('click', () => {
-    const warped = warpPerspective(state.photoImageData, state.quad, CARD_W, CARD_H);
+    const warped = warpPerspective(state.photoImageData, orientCardQuad(state.quad), CARD_W, CARD_H);
     goToReview(warped);
   });
 

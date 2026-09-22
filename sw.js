@@ -4,7 +4,9 @@
  * leitura são processados localmente), então basta cachear os arquivos
  * estáticos uma vez.
  */
-const CACHE_VERSION = 'leitura-de-cartas-v1';
+// Suba este número a cada mudança nos arquivos: o fetch abaixo serve do
+// cache primeiro, então sem isso quem já instalou continua na versão antiga.
+const CACHE_VERSION = 'leitura-de-cartas-v3';
 const PRECACHE_URLS = [
   './',
   './index.html',

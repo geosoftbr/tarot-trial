@@ -49,19 +49,25 @@ Tudo roda no próprio aparelho, em JavaScript puro:
 2. **Correção de perspectiva** — os 4 cantos são mapeados para um
    retângulo padrão via transformação projetiva (método clássico de
    Heckbert), a mesma ideia usada em apps de "escanear documento".
-3. **Leitura do índice do canto** — separa por componentes conexos o
-   valor (em cima) do naipe (embaixo), mede a cor média da tinta
-   (vermelho/preto) e compara a forma com modelos pré-gerados (uma vez,
-   a partir de uma fonte serifada) por similaridade — sem rede neural,
-   sem chamada de API.
+3. **Leitura do índice do canto** — recorta só a faixa do canto, separa
+   a tinta do papel (pelo menor canal RGB, para o vermelho não ficar
+   fraco), descarta o que não é índice (o naipe grande do centro e a
+   moldura das figuras) e separa o valor (em cima) do naipe (embaixo).
+   A cor da tinta (vermelho/preto) restringe o naipe, e cada forma é
+   comparada por similaridade com dois modelos: um gerado a partir de uma
+   fonte serifada e outro tirado de fotos reais do baralho. Sem rede
+   neural, sem chamada de API. Os dois cantos da carta são lidos, e o app
+   fica com o mais confiante.
 4. **Confirmação manual** — a carta identificada aparece sempre destacada
    com a confiança da leitura; a pessoa pode corrigir em dois toques
    (naipe + valor) se o palpite automático errar.
 
-Em testes com 52 cartas sintéticas (rotação, ruído e desfoque variados), o
-reconhecimento automático acerta valor **e** naipe em ~84% dos casos, com
-o naipe sozinho acertando ~92% e o valor sozinho ~89% — por isso a etapa
-de confirmação manual é sempre exibida antes da leitura.
+Em fotos reais das 52 cartas do baralho usado para os modelos, o app
+acerta valor **e** naipe de todas (medido deixando cada foto fora dos
+modelos usados para testá-la), inclusive com a carta inclinada, deitada ou
+de cabeça para baixo. Com outro baralho só os modelos de fonte ajudam, e o
+acerto cai para ~79% (confusões típicas: 3 ↔ 5, J → 3, Q → 6). Por isso a
+etapa de confirmação manual continua sempre visível.
 
 ## Estrutura do projeto
 
@@ -71,7 +77,7 @@ css/styles.css       visual
 js/cards.js          significados das 52 cartas (leitura estilo tarô)
 js/geometry.js        perspectiva, escala de cinza, componentes conexos
 js/recognizer.js      reconhecimento do valor/naipe a partir da carta já corrigida
-js/templates-data.js  modelos de cada valor/naipe (gerados uma vez, embutidos)
+js/templates-data.js  modelos de cada valor/naipe (fonte + baralho real, embutidos)
 js/app.js             interface, câmera, fluxo de captura → leitura
 manifest.webmanifest  metadados do PWA
 sw.js                 cache offline (app shell)
