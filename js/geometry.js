@@ -77,6 +77,23 @@ function warpPerspective(srcImageData, quad, outW, outH) {
   return { width: outW, height: outH, data: out };
 }
 
+/**
+ * Garante que o quadrilátero (TL,TR,BR,BL) descreva a carta "em pé": se os
+ * lados de cima/baixo forem mais longos que os laterais (carta deitada na
+ * foto), gira a ordem dos cantos em 90°. Sem isso a carta deitada seria
+ * esticada para o retângulo em pé e o índice do canto ficaria irreconhecível.
+ * (Qual dos dois giros de 90° é indiferente: o reconhecimento já tenta o
+ * canto de cima e o de baixo, invertido.)
+ */
+function orientCardQuad(quad) {
+  const d = (i, j) => Math.hypot(quad[i * 2] - quad[j * 2], quad[i * 2 + 1] - quad[j * 2 + 1]);
+  const horiz = d(0, 1) + d(3, 2);
+  const vert = d(0, 3) + d(1, 2);
+  if (horiz <= vert) return quad;
+  // novo TL = antigo BL, TR = TL, BR = TR, BL = BR
+  return [quad[6], quad[7], quad[0], quad[1], quad[2], quad[3], quad[4], quad[5]];
+}
+
 // ---------------------------------------------------------------------
 // Escala de cinza + Otsu
 // ---------------------------------------------------------------------
@@ -280,7 +297,7 @@ function jaccard(a, b) {
 
 if (typeof module !== 'undefined') {
   module.exports = {
-    squareToQuad, mapUV, warpPerspective, toGray, otsuThreshold,
+    squareToQuad, mapUV, warpPerspective, orientCardQuad, toGray, otsuThreshold,
     labelComponents, detectBrightQuad, resizeBoxToSquare, jaccard,
     resizeBoxToSquareSoft, softSimilarity,
   };
